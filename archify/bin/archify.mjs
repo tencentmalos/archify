@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const skillRoot = path.resolve(__dirname, '..');
 
-const TYPES = new Set(['architecture', 'workflow', 'sequence', 'dataflow', 'lifecycle']);
+const TYPES = new Set(['architecture', 'workflow', 'sequence', 'dataflow', 'lifecycle', 'timeline']);
 
 function usage() {
   return `Usage:
@@ -31,7 +31,7 @@ function usage() {
   archify demo [output-directory]
 
 Types:
-  architecture, workflow, sequence, dataflow, lifecycle
+  architecture, workflow, sequence, dataflow, lifecycle, timeline
 `;
 }
 
@@ -1388,6 +1388,7 @@ async function commandDoctor() {
     sequence: 'cache-miss-request.sequence.json',
     dataflow: 'product-analytics.dataflow.json',
     lifecycle: 'agent-run.lifecycle.json',
+    timeline: 'concurrency.timeline.json',
   };
 
   for (const type of TYPES) {
@@ -1908,11 +1909,11 @@ function commandValidate(args) {
   assertEvidenceType(type, repoRoot);
   const renderer = rendererPath(type);
 
-  if (layoutJson && !['architecture', 'workflow'].includes(type)) {
-    rejectCliArgument('--layout-json is currently supported for architecture and workflow diagrams only.', {
+  if (layoutJson && !['architecture', 'workflow', 'timeline'].includes(type)) {
+    rejectCliArgument('--layout-json is currently supported for architecture, workflow and timeline diagrams only.', {
       code: 'cli/unsupported-option',
       subject: { option: '--layout-json', type },
-      supportedFixes: ['remove --layout-json or use an architecture or workflow diagram'],
+      supportedFixes: ['remove --layout-json or use architecture, workflow or timeline'],
     });
   }
 

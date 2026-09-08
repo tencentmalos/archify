@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "diagram_type": "timeline",
+  "meta": {
+    "title": "并发时间轴模型示例",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "evidence_kind": "synthetic",
+  "clock": {
+    "id": "trace",
+    "unit": "ms",
+    "origin": "合成数据的相对时间零点",
+    "gpu_alignment": "calibrated",
+    "calibration_source": "fixture"
+  },
+  "window": {
+    "start": 0,
+    "end": 30
+  },
+  "sources": [
+    {
+      "id": "fixture",
+      "reference": "Synthetic test fixture; not a captured performance result",
+      "complete": true
+    }
+  ],
+  "lanes": [
+    {
+      "id": "guest",
+      "label": "Guest CPU",
+      "kind": "cpu"
+    },
+    {
+      "id": "record",
+      "label": "Host Record",
+      "kind": "cpu"
+    },
+    {
+      "id": "gpu",
+      "label": "GPU hardware",
+      "kind": "gpu"
+    },
+    {
+      "id": "present",
+      "label": "Present worker",
+      "kind": "cpu"
+    }
+  ],
+  "intervals": [
+    {
+      "id": "guest-a",
+      "lane": "guest",
+      "label": "构建请求 A",
+      "start": 0,
+      "end": 9,
+      "role": "work",
+      "source": "fixture",
+      "token": "A"
+    },
+    {
+      "id": "guest-b",
+      "lane": "guest",
+      "label": "构建请求 B",
+      "start": 12,
+      "end": 22,
+      "role": "work",
+      "source": "fixture",
+      "token": "B"
+    },
+    {
+      "id": "record-a",
+      "lane": "record",
+      "label": "记录请求 A",
+      "start": 9,
+      "end": 15,
+      "role": "work",
+      "source": "fixture",
+      "token": "A"
+    },
+    {
+      "id": "record-detail",
+      "lane": "record",
+      "label": "嵌套 detail，不重复计数",
+      "start": 10,
+      "end": 13,
+      "role": "detail",
+      "parent": "record-a",
+      "source": "fixture"
+    },
+    {
+      "id": "gpu-a",
+      "lane": "gpu",
+      "label": "GPU 执行 A",
+      "start": 15,
+      "end": 25,
+      "role": "work",
+      "source": "fixture",
+      "token": "A"
+    },
+    {
+      "id": "wait-a",
+      "lane": "present",
+      "label": "等待 GPU completion",
+      "start": 17,
+      "end": 25,
+      "role": "wait",
+      "source": "fixture",
+      "token": "A"
+    },
+    {
+      "id": "present-a",
+      "lane": "present",
+      "label": "提交显示 A",
+      "start": 25,
+      "end": 28,
+      "role": "work",
+      "source": "fixture",
+      "token": "A"
+    }
+  ],
+  "markers": [
+    {
+      "id": "event-a",
+      "label": "请求 A 就绪",
+      "time": 9,
+      "kind": "event",
+      "source": "fixture"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "dep-a",
+      "from": "guest-a",
+      "to": "record-a",
+      "label": "请求 A",
+      "source": "fixture"
+    },
+    {
+      "id": "dep-b",
+      "from": "record-a",
+      "to": "gpu-a",
+      "label": "提交 A",
+      "source": "fixture"
+    },
+    {
+      "id": "dep-c",
+      "from": "gpu-a",
+      "to": "present-a",
+      "label": "完成 A",
+      "source": "fixture"
+    }
+  ]
+}
