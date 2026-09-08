@@ -1,3 +1,4 @@
+import { paletteCss, paletteRuntime } from './color-palettes.mjs';
 import {
   escapeHtml as esc,
   localizeTemplate,
@@ -130,6 +131,7 @@ export function applyTemplate(template, {
   cards,
   locale,
   visualPreset = 'classic',
+  colorPalette = 'default',
   guidedViews = [],
   sourceEvidence = null,
 }) {
@@ -168,7 +170,9 @@ export function applyTemplate(template, {
     ? localizedTemplate.replace(I18N_PLACEHOLDER, () => i18nData)
     : localizedTemplate.replace(GUIDED_VIEWS_PLACEHOLDER, () => `${i18nData}\n    ${GUIDED_VIEWS_PLACEHOLDER}`);
   return templateWithI18n
-    .replace(TEMPLATE_PLACEHOLDERS[0], () => `<html lang="${esc(resolvedLocale)}" data-theme="dark" data-preset="${esc(visualPreset)}">`)
+    .replace('</style>', () => paletteCss().trimEnd() + '\n</style>')
+    .replace('</body>', () => paletteRuntime(resolvedLocale) + '\n</body>')
+    .replace(TEMPLATE_PLACEHOLDERS[0], () => `<html lang="${esc(resolvedLocale)}" data-theme="dark" data-preset="${esc(visualPreset)}"${colorPalette !== 'default' ? ` data-color-palette="${esc(colorPalette)}"` : ''}>`)
     .replace(TEMPLATE_PLACEHOLDERS[1], () => `<title>${esc(translateMessage(resolvedLocale, 'page.title', { title }))}</title>`)
     .replace(TEMPLATE_PLACEHOLDERS[2], () => `<h1>${esc(title)}</h1>`)
     .replace(SUBTITLE_SLOT_RE, (_match, indent, newline = '') => renderedSubtitle

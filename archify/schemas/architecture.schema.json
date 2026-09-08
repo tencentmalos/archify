@@ -13,6 +13,7 @@
       "additionalProperties": false,
       "required": ["title"],
       "properties": {
+        "color_palette": { "$ref": "https://github.com/tt-a1i/archify/schemas/common.schema.json#/$defs/colorPalette" },
         "title": { "type": "string", "minLength": 1 },
         "locale": { "$ref": "common.schema.json#/$defs/locale" },
         "subtitle": { "type": "string" },

@@ -62,6 +62,7 @@ export function writeDiagram({ outPath, template, diagramType, meta, svg, cards,
     cards: renderCards(cards),
     locale: meta.locale,
     visualPreset: meta.visual_preset || 'classic',
+    colorPalette: meta.color_palette || 'default',
     guidedViews: meta.views || [],
     sourceEvidence,
   }));

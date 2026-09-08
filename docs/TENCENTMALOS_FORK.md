@@ -5,10 +5,11 @@ Fork: https://github.com/tencentmalos/archify
 Baseline: `2ead014aa8ec91f104cd052f1a6ca82de5e26c31`
 Customization branch: `feature/concurrency-timeline`
 
-This branch adds the native `timeline` schema, evidence/interval analyzer, proportional renderer,
+This branch adds selectable semantic color palettes (including paper/brick-red), shared palette export for target adapters, contrast and browser/export tests, and the native `timeline` schema, evidence/interval analyzer, proportional renderer,
 CLI registration, packaged zero-dependency validator, bilingual description, skill reference and
 regression tests. It reuses native atomic delivery, preview and viewer/export contracts. It does
-not replace existing five structural modes or rebuild the official marketing gallery. The schema
+not replace the existing five structural modes. Existing gallery/golden artifacts are regenerated
+when shared viewer code changes, so their reproducibility checks remain valid. The schema
 namespace names the fork; common definitions explicitly retain upstream's schema ID.
 
 The checked-in upstream `archify.zip` is not the distribution for this branch. Install the `archify/`
@@ -37,3 +38,5 @@ informational and must not silently replace this fork or drop its customization.
 The global installation may also contain local skill routing overlays. Preserve/reapply these after
 installing a new pinned commit; they are not modifications to the native renderer. Foundation stores
 cross-project SVG/skill routing and Feishu-backend guidance separately.
+
+Palette code and target-export contract: `archify/references/color-palettes.md`. The native timeline includes explicit swimlane backgrounds, headers and major/minor elapsed-time guides.

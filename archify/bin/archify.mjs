@@ -26,6 +26,7 @@ function usage() {
   archify guide [scenario or question] [--json] [--lang en|zh]
   archify brands [name, alias, domain, or category] [--json]
   archify brands capture <url> [--json]
+  archify palettes [--json]
   archify examples
   archify doctor
   archify demo [output-directory]
@@ -2069,6 +2070,12 @@ try {
     case 'brands':
       await commandBrands(args);
       break;
+    case 'palettes': {
+      if (args.some(arg => arg !== '--json') || args.length > 1) fail('Usage: archify palettes [--json]');
+      const { paletteRegistry } = await import('../renderers/shared/color-palettes.mjs');
+      console.log(JSON.stringify(paletteRegistry(), null, 2));
+      break;
+    }
     case 'examples':
       commandExamples();
       break;

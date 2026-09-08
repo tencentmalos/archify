@@ -20,6 +20,15 @@ Its schema, clock/evidence gate and interval analysis precede rendering; sequenc
 not measured time. Keep domain collectors/adapters separate and preserve their source JSON.
 For the five structural modes, continue the upstream fast path below.
 
+## Color palette selection (fork extension)
+
+All six types support `meta.color_palette`: `studio`, `ocean`, `sunset`, `feishu`, or `default`.
+Use the user-selected palette, otherwise keep the existing default. The viewer exposes a separate
+palette selector inside Style; colors do not change topology or light/dark mode. Read
+[color palettes](references/color-palettes.md) when choosing colors, exporting to a document,
+checking contrast, or integrating the Feishu SVG child. The paper/brick-red palette lives here;
+Feishu adapters consume `archify palettes --json` rather than defining their own colors.
+
 ## Fast authoring path
 
 Use this bounded path for ordinary generation. Do not read the optional Viewer Runtime reference unless the user asks about those features.

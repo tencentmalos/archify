@@ -26,10 +26,11 @@ if (process.argv.includes('--layout-json')) {
   [['c-backend', label('work', '工作')], ['c-external', 'detail'], ['c-security', 'wait']].forEach(([css, name], index) => {
     parts.push(`<rect x="${860 + index * 100}" y="43" width="18" height="14" class="${css}"/>${text(884 + index * 100, 55, name, 12)}`);
   });
-  for (const [index, lane] of report.lanes.entries()) {
+  for (const lane of report.lanes) {
     const top = lane.y - 8;
-    parts.push(`<rect x="30" y="${top}" width="1130" height="${lane.height + 8}" rx="4" fill="var(${index % 2 ? '--external-fill' : '--lane-fill'})" stroke="var(--lane-stroke)" stroke-width="1.2"/>`);
-    parts.push(`<rect x="30" y="${top}" width="190" height="${lane.height + 8}" rx="4" fill="var(--mask)" stroke="var(--lane-stroke)" stroke-width="1.2"/>`);
+    parts.push(`<rect x="30" y="${top}" width="1130" height="${lane.height + 8}" rx="8" fill="var(--lane-fill)" stroke="var(--lane-stroke)" stroke-width="1.2"/>`);
+    parts.push(`<rect x="30" y="${top}" width="190" height="${lane.height + 8}" rx="8" fill="var(--lane-header, var(--mask))" stroke="var(--lane-stroke)" stroke-width="1.2"/>`);
+    parts.push(`<rect x="30" y="${top + 8}" width="3" height="${lane.height - 8}" rx="1.5" fill="var(--backend-stroke)"/>`);
   }
   for (let minor = 0; minor <= 30; minor++) {
     if (minor % 5 === 0) continue;
@@ -63,7 +64,7 @@ if (process.argv.includes('--layout-json')) {
     parts.push(`<g ${focusNodeAttrs(bar.id, bar.label, metadata, diagram.meta.locale)}>${focusNodeTitle(bar.label, metadata)}`);
     // Never widen a short interval to fit its label. The full label stays in accessible
     // metadata/tooltip and the saved JSON. Adjacent intervals keep their actual endpoints.
-    parts.push(`<rect x="${bar.x}" y="${bar.y}" width="${bar.width}" height="24" rx="2" class="${css}" stroke-width="1" ${bar.role === 'wait' ? 'stroke-dasharray="4 3"' : ''} data-time-start="${bar.visibleStart}" data-time-end="${bar.visibleEnd}"/>`);
+    parts.push(`<rect x="${bar.x}" y="${bar.y}" width="${bar.width}" height="24" rx="4" class="${css}" stroke-width="1" ${bar.role === 'wait' ? 'stroke-dasharray="4 3"' : ''} data-time-start="${bar.visibleStart}" data-time-end="${bar.visibleEnd}"/>`);
     const units = [...bar.label].reduce((sum, char) => sum + (char.codePointAt(0) < 128 ? 0.62 : 1), 0);
     if (units * 12 + 16 <= bar.width) parts.push(text(bar.x + 8, bar.y + 16, bar.label, 12));
     parts.push('</g>');

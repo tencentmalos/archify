@@ -49,9 +49,9 @@
       --grid: #1e293b;
       --text: #ffffff;
       --text-muted: #94a3b8;
-      --text-dim: #475569;
+      --text-dim: var(--text-muted);
       /* UI chrome and menu hints need more contrast than SVG .t-dim accents */
-      --text-faint: #7d8da1;
+      --text-faint: var(--text-muted);
 
       --panel: rgba(15, 23, 42, 0.5);
       --panel-border: #1e293b;
@@ -92,8 +92,8 @@
       --grid: #e2e8f0;
       --text: #0f172a;
       --text-muted: #64748b;
-      --text-dim: #94a3b8;
-      --text-faint: #64748b;
+      --text-dim: var(--text-muted);
+      --text-faint: var(--text-muted);
 
       --panel: #ffffff;
       --panel-border: #e2e8f0;
@@ -141,8 +141,8 @@
       --lane-stroke: #2c4564;
       --text: #f5fbff;
       --text-muted: #9eb0c7;
-      --text-dim: #52667f;
-      --text-faint: #7890ad;
+      --text-dim: var(--text-muted);
+      --text-faint: var(--text-muted);
       --mask: #07101e;
       --frontend-fill: rgba(6, 182, 212, 0.14);
       --frontend-stroke: #67e8f9;
@@ -174,8 +174,8 @@
       --lane-stroke: #a9c5d5;
       --text: #102638;
       --text-muted: #587287;
-      --text-dim: #8aa2b4;
-      --text-faint: #668397;
+      --text-dim: var(--text-muted);
+      --text-faint: var(--text-muted);
       --mask: #ffffff;
       --frontend-fill: rgba(6, 182, 212, 0.09);
       --frontend-stroke: #0789a1;
@@ -210,8 +210,8 @@
       --lane-stroke: #34799a;
       --text: #e3f6ff;
       --text-muted: #91b8ca;
-      --text-dim: #557e92;
-      --text-faint: #739caf;
+      --text-dim: var(--text-muted);
+      --text-faint: var(--text-muted);
       --mask: #0a2031;
       --frontend-fill: rgba(26, 157, 193, 0.14);
       --frontend-stroke: #66d9ef;
@@ -245,8 +245,8 @@
       --lane-stroke: #83b2c4;
       --text: #123344;
       --text-muted: #4e7486;
-      --text-dim: #86a6b4;
-      --text-faint: #668c9d;
+      --text-dim: var(--text-muted);
+      --text-faint: var(--text-muted);
       --mask: #f9fdff;
       --frontend-fill: rgba(8, 145, 178, 0.08);
       --frontend-stroke: #087f9c;
@@ -287,8 +287,8 @@
       --lane-stroke: #726957;
       --text: #f4eddf;
       --text-muted: #b9ae9b;
-      --text-dim: #776e60;
-      --text-faint: #9d917e;
+      --text-dim: var(--text-muted);
+      --text-faint: var(--text-muted);
       --mask: #231f18;
       --frontend-fill: rgba(43, 133, 142, 0.16);
       --frontend-stroke: #7fc6c7;
@@ -322,8 +322,8 @@
       --lane-stroke: #b8aa94;
       --text: #242018;
       --text-muted: #6f6658;
-      --text-dim: #a09788;
-      --text-faint: #817767;
+      --text-dim: var(--text-muted);
+      --text-faint: var(--text-muted);
       --mask: #fbf8f1;
       --frontend-fill: rgba(31, 117, 126, 0.09);
       --frontend-stroke: #287e84;
@@ -2976,8 +2976,8 @@
         --panel-border: #e2e8f0;
         --text: #0f172a;
         --text-muted: #475569;
-        --text-dim: #94a3b8;
-        --text-faint: #64748b;
+        --text-dim: var(--text-muted);
+        --text-faint: var(--text-muted);
         --mask: #ffffff;
         --lane-fill: rgba(248, 250, 252, 0.65);
         --lane-stroke: #cbd5e1;
@@ -6138,7 +6138,7 @@
               }
               if (rule.type !== 1) return; // plain style rules only
               var sel = rule.selectorText || '';
-              if (/(^|,)\s*(svg|:root|\[data-theme|\[data-preset|\.c-|\.t-|\.a-|\.m-)/.test(sel)) {
+              if (/(^|,)\s*(svg|:root|\[data-theme|\[data-preset|\[data-color-palette|\.c-|\.t-|\.a-|\.m-)/.test(sel)) {
                 out.push(rule.cssText);
               }
             });
@@ -6164,6 +6164,7 @@
           var probe = document.createElement('div');
           probe.setAttribute('data-theme', themeAttr);
           probe.setAttribute('data-preset', document.documentElement.getAttribute('data-preset') || 'classic');
+          probe.setAttribute('data-color-palette', document.documentElement.getAttribute('data-color-palette') || 'default');
           probe.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;';
           document.body.appendChild(probe);
           try {
