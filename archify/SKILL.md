@@ -16,6 +16,8 @@ Create a self-contained, interactive HTML diagram from a small typed JSON specif
 
 For measured spans, stage overlap or CPU/GPU concurrency, read
 [concurrency-timeline](references/concurrency-timeline.md) and use native `timeline`.
+For logical Guest, physical Host and Async phases, use one shared timeline with
+labeled Zone Rect groups and independent zone statistics. Keep phase names readable.
 Its schema, clock/evidence gate and interval analysis precede rendering; sequence coordinates are
 not measured time. Keep domain collectors/adapters separate and preserve their source JSON.
 For the five structural modes, continue the upstream fast path below.

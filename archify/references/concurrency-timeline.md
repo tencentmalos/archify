@@ -58,3 +58,25 @@ semantics than this generic model; keep that source and its report. Export only 
 view to timeline, with stable interval IDs and a mapping/source sidecar. Do not claim a universal
 lossless converter. Editable Feishu output still follows its JSON-scene child and target validator;
 raw Archify SVG is not a compatible editable-whiteboard format.
+
+## Shared phase timelines with Zone Rects
+
+Use optional `zones: [{id, label, lanes}]` to put logical Guest/SDK, physical Host
+and Async tracks on one shared, calibrated time axis. Zone Rects are visual
+groups, not elapsed intervals or evidence of execution. Zones must partition
+every lane exactly once, in displayed order. The model exposes independent
+`metrics.byZone` and per-lane work/wait unions; it deliberately omits a global
+peak/histogram across zones. Do not combine logical and physical lane counts.
+
+Use `meta.interval_color: "label"` for consistent phase colors; wait outlines
+stay dashed. `intervals[].display_label` is an optional concise display name,
+while `label` remains the full searchable/focus identity. Names fit inside bars
+first; readable prefixes can end in an ellipsis. A tiny bar can label free space
+to its right, stopping before the next interval on that row. No bar is widened,
+merged or sampled to fit names. A displayed duration with `≥` is clipped by the
+selected window. Source frame labels/durations should be supplied explicitly.
+
+Keep the primary concurrency comparison in one chart; individual partitions are
+optional drilldowns. Prefer an explicit smaller common frame window if dense
+workloads exceed capacity. This is a time-proportional flame-chart reading aid;
+row packing on a Host lane does not reconstruct a call stack or causal relation.

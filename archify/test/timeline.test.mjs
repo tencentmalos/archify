@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { analyzeTimeline } from '../renderers/timeline/model.mjs';
+import { fitTimelineLabel, intervalText } from '../renderers/timeline/labels.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const example = () => JSON.parse(fs.readFileSync(path.join(root, 'examples/concurrency.timeline.json'), 'utf8'));
@@ -106,6 +107,62 @@ test('short interval is not widened and full escaped label remains accessible', 
     assert.equal(result.status, 0, result.stderr);
     const html = fs.readFileSync(output, 'utf8');
     assert.ok(html.includes('&lt;script&gt; &amp; short span'));
+    assert.ok(analyzeTimeline(d).bars[0].width < 0.001);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+test('zone rectangles share exact time while concurrency stays separate', () => {
+  const d = sample();
+  d.lanes[0].kind = 'other';
+  d.zones = [{ id: 'guest-zone', label: 'Guest', lanes: ['guest'] },
+    { id: 'host-zone', label: 'Host', lanes: ['record'] }];
+  const r = analyzeTimeline(d);
+  assert.equal(r.metrics.aggregation, 'per_zone');
+  assert.equal(r.metrics.peakActiveLanes, undefined);
+  assert.equal(r.metrics.histogram, undefined);
+  assert.deepEqual(r.metrics.byZone.map(z => z.peakActiveLanes), [1, 1]);
+  for (const z of r.metrics.byZone) assert.equal(z.histogram.reduce((s, h) => s + h.duration, 0), 20);
+  assert.equal(r.bars[1].x - r.bars[0].x, 1320 * 5 / 20);
+  for (const z of r.zones) for (const id of z.lanes) {
+    const l = r.lanes.find(l => l.id === id);
+    assert.ok(l.y > z.y && l.y + l.height <= z.y + z.height);
+  }
+});
+
+test('zones reject duplicate, missing, unknown and reordered lane membership', () => {
+  for (const groups of [[['guest'], ['guest']], [['guest']], [['absent'], ['record']], [['record'], ['guest']]]) {
+    const d = sample();
+    d.zones = groups.map((lanes, n) => ({ id: `zone-${n}`, label: 'Zone', lanes }));
+    assert.throws(() => analyzeTimeline(d), /partition all lanes exactly once/);
+  }
+});
+
+test('labels retain readable prefixes without enlarging bars or shrinking text', () => {
+  assert.equal(fitTimelineLabel('Maxwell', 60), 'Maxwell');
+  assert.equal(fitTimelineLabel('WaitSubmittedCommands', 90), 'WaitSubmit…');
+  assert.equal(fitTimelineLabel('Maxwell', 15), '');
+  const bar = { label: 'Host::VulkanTimeline.Wait', display_label: 'TimelineWait', width: 130,
+    start: 0, end: 20, visibleStart: 5, visibleEnd: 20 };
+  assert.equal(intervalText(bar), 'TimelineWait');
+  assert.match(intervalText({ ...bar, width: 350 }), /≥15 ms/);
+});
+
+test('short isolated phases get outside labels, full identity and exact geometry', () => {
+  const d = sample();
+  d.intervals[0].end = 0.00001;
+  d.intervals[0].label = 'Full original phase';
+  d.intervals[0].display_label = 'Phase';
+  d.zones = [{ id: 'combined', label: 'Combined', lanes: ['guest', 'record'] }];
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'archify-phase-label-'));
+  try {
+    const input = path.join(temp, 'input.json'), output = path.join(temp, 'timeline.html');
+    fs.writeFileSync(input, JSON.stringify(d));
+    const result = cli('deliver', 'timeline', input, output, '--quality', 'showcase', '--json');
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const html = fs.readFileSync(output, 'utf8');
+    assert.match(html, /data-timeline-zone="combined"/);
+    assert.match(html, /data-timeline-label="outside">Phase<\/text>/);
+    assert.match(html, /Full original phase/);
     assert.ok(analyzeTimeline(d).bars[0].width < 0.001);
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
