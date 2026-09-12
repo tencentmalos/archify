@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Concurrent phases — synthetic sequence",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [1000, 820],
+    "phase_bands": true,
+    "phase_note": "Synthetic example; phases are logical chapters and vertical distance is not elapsed time."
+  },
+  "participants": [
+    {"id": "main", "type": "frontend", "label": "Main", "sublabel": "Producer"},
+    {"id": "worker", "type": "backend", "label": "Worker", "sublabel": "Consumer"},
+    {"id": "present", "type": "cloud", "label": "Present", "sublabel": "Display thread"}
+  ],
+  "segments": [
+    {"from": 155, "to": 330, "label": "Prepare", "type": "frontend"},
+    {"from": 340, "to": 740, "label": "par\nWait / execute", "type": "backend"}
+  ],
+  "activities": [
+    {"id": "record", "participant": "main", "from": 175, "to": 235, "label": "Record commands", "detail": "request 42"},
+    {"id": "wait", "participant": "main", "from": 290, "to": 610, "label": "Wait result", "detail": "Crosses phase boundary", "type": "security"},
+    {"id": "execute", "participant": "worker", "from": 390, "to": 490, "label": "Execute work", "detail": "request 42"},
+    {"id": "display", "participant": "present", "from": 650, "to": 720, "label": "Present", "detail": "render_ready → present"}
+  ],
+  "messages": [
+    {"id": "enqueue", "from": "main", "to": "worker", "y": 270, "label": "enqueue(42)", "variant": "dashed"},
+    {"id": "complete", "from": "worker", "to": "main", "y": 590, "label": "complete(42)", "variant": "dashed"},
+    {"id": "publish", "from": "worker", "to": "present", "y": 630, "label": "publish image", "variant": "dashed"}
+  ]
+}

@@ -22,6 +22,13 @@ Its schema, clock/evidence gate and interval analysis precede rendering; sequenc
 not measured time. Keep domain collectors/adapters separate and preserve their source JSON.
 For the five structural modes, continue the upstream fast path below.
 
+## Phase sequence companion (fork extension)
+
+For UML concurrency stories, use native `sequence` with named Phase bands and
+local activities. Read [phase sequence](references/phase-sequence.md). Keep this
+view alongside measured timelines; sequence geometry is not calibrated time.
+The installed `uml-sequence-time` skill adds profiler evidence and handoff guidance.
+
 ## Color palette selection (fork extension)
 
 All six types support `meta.color_palette`: `studio`, `ocean`, `sunset`, `feishu`, or `default`.

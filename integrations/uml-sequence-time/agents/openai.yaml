@@ -1,0 +1,4 @@
+interface:
+  display_name: "UML Sequence Time"
+  short_description: "Analyze concurrent phases with UML sequence views"
+  default_prompt: "Use $uml-sequence-time to explain concurrent phases, thread handoffs, and waits from source and profiler evidence."

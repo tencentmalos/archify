@@ -112,3 +112,10 @@ messages overlap for at least 8px. Shared semantic endpoints, point touches,
 and shorter overlaps remain valid. Showcase also rejects any route segment
 below 8px and any interior turn segment below 16px; ordinary 8–15px endpoint
 stubs remain valid.
+
+## Phase bands and local activities
+
+See [the phase sequence contract](../../references/phase-sequence.md) and
+`examples/concurrent-phases.sequence.json` for the opt-in Phase gutter, readable
+activity boxes, cross-phase waits and async handoffs. Standard sequence layout
+remains unchanged when these optional fields are absent.

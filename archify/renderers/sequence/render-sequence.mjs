@@ -22,6 +22,7 @@ const { diagram: sequence, template, outPath } = await loadDiagramWithBrandMarks
 });
 
 const viewBox = sequence.meta?.viewBox || [920, 760];
+const phaseBands = sequence.meta?.phase_bands === true;
 // The timeline scales with viewBox height: a taller viewBox gains message room,
 // a shorter one shrinks the readable band (validated below) instead of clipping.
 // `column_fit: "spread"` widens the lanes with the viewBox instead of keeping
@@ -30,7 +31,7 @@ const viewBox = sequence.meta?.viewBox || [920, 760];
 // diagrams keep their coordinates.
 const columnFit = sequence.meta?.column_fit === 'spread' ? 'spread' : 'fixed';
 const participantCount = Math.max(1, asArray(sequence.participants).length);
-const sideMargin = 62;
+const sideMargin = phaseBands ? 210 : 62;
 const participantW = columnFit === 'spread'
   ? Math.max(86, Math.min(190, Math.round((viewBox[0] - sideMargin * 2) / participantCount) - 24))
   : 86;
@@ -43,11 +44,11 @@ const layout = {
   participantW,
   participantH: 54,
   lifelineTop: 142,
-  lifelineBottom: viewBox[1] - 65,
+  lifelineBottom: viewBox[1] - (phaseBands ? 55 : 65),
   legendY: viewBox[1] - 54,
-  leftX: columnFit === 'spread' ? sideMargin + participantW / 2 : sideMargin,
+  leftX: phaseBands || columnFit === 'spread' ? sideMargin + participantW / 2 : sideMargin,
   colGap,
-  labelH: 16
+  labelH: phaseBands ? 20 : 16
 };
 
 const participantBoxWidthNote = columnFit === 'spread'
@@ -77,26 +78,60 @@ const participants = new Map(asArray(sequence.participants).map((participant, in
   }
 ]));
 
+function wrapActivityText(value, width, size) {
+  const lines = [];
+  const fits = text => textUnits(text) * size * 0.62 <= width;
+  for (const paragraph of String(value || '').split('\n')) {
+    let line = '';
+    // Prefer word boundaries; split only a token that cannot fit on its own.
+    for (const word of paragraph.trim().split(/\s+/).filter(Boolean)) {
+      const joined = line ? `${line} ${word}` : word;
+      if (fits(joined)) { line = joined; continue; }
+      if (line) { lines.push(line); line = ''; }
+      for (const char of word) {
+        if (line && !fits(line + char)) { lines.push(line); line = ''; }
+        line += char;
+      }
+    }
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+
+const activities = asArray(sequence.activities).map(a => {
+  const participant = participants.get(a.participant);
+  const width = layout.participantW - 12;
+  const titleLines = wrapActivityText(a.label, width - 16, 13);
+  const detailLines = wrapActivityText(a.detail, width - 16, 11);
+  return { ...a, x: (participant?.cx || 0) - width / 2, y: a.from,
+    width, height: a.to - a.from, titleLines, detailLines };
+});
+
+function activeHalfWidth(id, y) {
+  const activity = activities.find(a => a.participant === id && a.from <= y && a.to >= y);
+  return activity ? activity.width / 2 : 7;
+}
+
 function messageGeometry(message) {
   const from = participants.get(message.from);
   const to = participants.get(message.to);
   if (!from || !to || typeof message.y !== 'number') return null;
   const direction = to.cx > from.cx ? 1 : -1;
-  const start = from.cx + direction * 7;
-  const end = to.cx - direction * 7;
+  const start = from.cx + direction * activeHalfWidth(message.from, message.y);
+  const end = to.cx - direction * activeHalfWidth(message.to, message.y);
   return { start, end, center: (start + end) / 2 };
 }
 
 function messageLabelBox(message, relationIndex = null) {
   const geometry = messageGeometry(message);
   if (!geometry) return null;
-  const width = Math.max(34, textUnits(message.label) * 5.2 + 12);
+  const width = Math.max(34, textUnits(message.label) * (phaseBands ? 8.1 : 5.2) + 12);
   return {
     relation: message,
     relationIndex,
     label: message.label,
     x: geometry.center - width / 2,
-    y: message.y - 20,
+    y: message.y - (phaseBands ? 24 : 20),
     width,
     height: layout.labelH,
   };
@@ -130,17 +165,18 @@ const compositionFrames = asArray(sequence.segments).map((segment, index) => ({
   id: index,
   label: segment.label,
   kind: 'segment',
-  x: 48,
+  x: phaseBands ? 20 : 48,
   y: segment.from,
-  width: viewBox[0] - 96,
+  width: viewBox[0] - (phaseBands ? 40 : 96),
   height: segment.to - segment.from,
   radius: 10,
 }));
 
 function messagePath(message) {
+  const g = messageGeometry(message);
   return {
-    points: participants.has(message.from) && participants.has(message.to)
-      ? [[participants.get(message.from).cx, message.y], [participants.get(message.to).cx, message.y]]
+    points: g
+      ? [[g.start, message.y], [g.end, message.y]]
       : []
   };
 }
@@ -148,13 +184,21 @@ function messagePath(message) {
 function validateSequence() {
   const problems = [];
   if (participants.size !== asArray(sequence.participants).length) problems.push('Participant ids must be unique.');
+  if (new Set(activities.map(a => a.id)).size !== activities.length) problems.push('Activity ids must be unique.');
+  for (const a of activities) {
+    if (!participants.has(a.participant)) problems.push(`Activity ${a.id}: unknown participant.`);
+    if (participants.has(a.id)) problems.push(`Activity ${a.id}: id conflicts with a participant.`);
+    if (a.from < layout.lifelineTop || a.to > layout.lifelineBottom || a.to <= a.from) problems.push(`Activity ${a.id}: invalid range.`);
+    if (14 + a.titleLines.length * 17 + a.detailLines.length * 15 > a.height) problems.push(`Activity ${a.id}: text needs a taller box.`);
+    for (const other of activities) if (a.id < other.id && rectsOverlap(a, other, 0)) problems.push(`Activities ${a.id} and ${other.id} overlap.`);
+  }
 
   if (layout.lifelineBottom - layout.lifelineTop < 120) {
     problems.push(`viewBox height ${viewBox[1]} leaves under 120px of timeline — set meta.viewBox[1] to at least ${layout.lifelineTop + 120 + 65}.`);
   }
 
   for (const participant of participants.values()) {
-    const estLabelW = textUnits(participant.label) * 6.8;
+    const estLabelW = textUnits(participant.label) * (phaseBands ? 15 * 0.62 : 6.8);
     if (estLabelW > layout.participantW + 6) {
       problems.push(`Label "${participant.label}" (~${Math.round(estLabelW)}px) is wider than the ${layout.participantW}px participant box — shorten it.`);
     }
@@ -164,7 +208,7 @@ function validateSequence() {
     // ordinary case, this rejects what it cannot rescue.
     if (participant.sublabel) {
       const availableTextW = availableNodeTextWidth(layout.participantW);
-      const minimumW = minimumNodeTextWidth(participant.sublabel, participantTextFit.sublabelMinimum);
+      const minimumW = minimumNodeTextWidth(participant.sublabel, phaseBands ? 11 : participantTextFit.sublabelMinimum);
       if (minimumW > availableTextW) {
         problems.push(`Sublabel "${participant.sublabel}" needs ~${Math.ceil(minimumW)}px at the ${participantTextFit.sublabelMinimum}px legible minimum, but participant "${participant.id}" provides ${availableTextW}px — shorten the sublabel (${participantBoxWidthNote}).`);
       }
@@ -181,6 +225,12 @@ function validateSequence() {
     if (participants.has(message.from) && participants.has(message.to)) {
       const distance = Math.abs(participants.get(message.to).cx - participants.get(message.from).cx);
       if (distance < 60) problems.push(`Message "${message.label}" spans ${Math.round(distance)}px (minimum 60px) — give its participants more column distance.`);
+    }
+    const route = messageRouteBox(message), labelBox = messageLabelBox(message);
+    for (const a of activities) {
+      if (a.participant !== message.from && a.participant !== message.to && route && rectsOverlap(route, a, -1))
+        problems.push(`Message ${message.id || message.label} crosses unrelated activity ${a.id}.`);
+      if (labelBox && rectsOverlap(labelBox, a, -1)) problems.push(`Message label ${message.label} overlaps activity ${a.id}.`);
     }
   }
 
@@ -283,6 +333,11 @@ function validateSequence() {
     if (segment.from < layout.topY || segment.to > layout.lifelineBottom + 20) {
       problems.push(`Segment "${segment.label}" extends outside the canvas — keep its y range between ${layout.topY} and ${layout.lifelineBottom + 20}.`);
     }
+    if (phaseBands) {
+      const lines = wrapActivityText(segment.label, 160, 14);
+      if (lines.length * 19 + 24 > segment.to - segment.from) problems.push(`Segment ${segment.label}: phase label needs more height.`);
+      continue;
+    }
     const labelBox = segmentLabelBox(segment);
     const availableWidth = Math.max(0, viewBox[0] - 48 - labelBox.x);
     if (labelBox.x + labelBox.width > viewBox[0] - 48) {
@@ -302,6 +357,10 @@ function validateSequence() {
     problems.push(`Participants exceed viewBox width — set meta.viewBox[0] to at least ${requiredWidth} or remove a participant.`);
   }
 
+  if (phaseBands && sequence.meta.phase_note && textUnits(sequence.meta.phase_note) * 12 * 0.62 > viewBox[0] - 60) {
+    problems.push('Phase note exceeds the canvas width; use a shorter summary and retain details in evidence notes.');
+  }
+
   if (problems.length) {
     throwDiagnosticProblems('Sequence layout validation failed', problems, {
       subject: { diagramType: 'sequence' },
@@ -313,10 +372,10 @@ function renderParticipant(participant) {
   const fill = componentFill[participant.type] || 'c-external';
   const hasSub = participant.sublabel != null && participant.sublabel !== '';
   const sub = hasSub
-    ? `\n          <text data-detail="context" x="${participant.cx}" y="${layout.topY + 39}" class="t-muted" font-size="${fittedNodeFontSize(participant.sublabel, layout.participantW, participantTextFit.sublabelPreferred, participantTextFit.sublabelMinimum)}" text-anchor="middle">${esc(participant.sublabel)}</text>`
+    ? `\n          <text ${phaseBands ? '' : 'data-detail="context"'} x="${participant.cx}" y="${layout.topY + 39}" class="t-muted" font-size="${phaseBands ? 11 : fittedNodeFontSize(participant.sublabel, layout.participantW, participantTextFit.sublabelPreferred, participantTextFit.sublabelMinimum)}" text-anchor="middle">${esc(participant.sublabel)}</text>`
     : '';
   const brand = renderBrandMark(participant, { x: participant.x + layout.participantW - 22, y: layout.topY + 6 });
-  const labelFontSize = fittedNodeFontSize(participant.label, brandLabelFitWidth(participant, layout.participantW), 11, 8);
+  const labelFontSize = phaseBands ? 15 : fittedNodeFontSize(participant.label, brandLabelFitWidth(participant, layout.participantW), 11, 8);
   const passport = {
     kind: participant.type,
     sublabel: participant.sublabel,
@@ -337,10 +396,17 @@ function renderLifeline(participant) {
 }
 
 function renderSegment(segment, index) {
+  if (phaseBands) {
+    const fill = componentFill[segment.type] || 'c-external';
+    return `<g data-phase-band="${index}"><rect x="20" y="${segment.from}" width="${viewBox[0] - 40}" height="${segment.to - segment.from}" rx="5" class="${fill}" stroke-width="0.8"/>
+      <rect x="20" y="${segment.from}" width="180" height="${segment.to - segment.from}" rx="5" class="${fill}" stroke-width="0.8"/></g>`;
+  }
   return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="segment" data-composition-frame-id="${index}" x="48" y="${segment.from}" width="${viewBox[0] - 96}" height="${segment.to - segment.from}" rx="10" class="c-lane" stroke-width="1"/>`;
 }
 
 function renderSegmentLabel(segment, index) {
+  if (phaseBands) return `<g data-phase-label="${index}">${wrapActivityText(segment.label, 160, 14).map((line, n) =>
+    `<text x="30" y="${segment.from + 28 + n * 19}" class="t-primary" font-size="14" font-weight="600">${esc(line)}</text>`).join('')}</g>`;
   const label = segmentLabelBox(segment);
   return `        <g data-graph-role="segment-label" data-segment-id="${index}">
           <rect x="${label.x}" y="${label.y}" width="${label.width}" height="${label.height}" rx="3" class="c-mask"/>
@@ -357,6 +423,16 @@ function renderActivation(activation) {
         <rect x="${x}" y="${activation.from}" width="10" height="${height}" rx="3" class="${fill}" stroke-width="1"/>`;
 }
 
+function renderActivity(a) {
+  const fill = componentFill[a.type] || componentFill[participants.get(a.participant).type] || 'c-external';
+  const passport = { kind: 'activity', sublabel: a.detail, context: a.note || 'Sequence layout only; not a measured time axis.' };
+  return `<g data-sequence-activity="${esc(a.id)}" ${focusNodeAttrs(a.id, a.label, passport, sequence.meta.locale)}>${focusNodeTitle(a.label, passport)}
+    <rect x="${a.x}" y="${a.y}" width="${a.width}" height="${a.height}" rx="5" class="c-mask"/>
+    <rect x="${a.x}" y="${a.y}" width="${a.width}" height="${a.height}" rx="5" class="${fill}" stroke-width="1.2"/>
+    ${a.titleLines.map((line, n) => `<text x="${a.x + 8}" y="${a.y + 22 + n * 17}" class="t-primary" font-size="13" font-weight="600">${esc(line)}</text>`).join('')}
+    ${a.detailLines.map((line, n) => `<text x="${a.x + 8}" y="${a.y + 22 + a.titleLines.length * 17 + n * 15}" class="t-primary" font-size="11">${esc(line)}</text>`).join('')}</g>`;
+}
+
 function messageLabel(message, x1, x2) {
   const box = messageLabelBox(message);
   const center = box ? box.x + box.width / 2 : (x1 + x2) / 2;
@@ -369,9 +445,9 @@ function messageLabel(message, x1, x2) {
       : message.variant === 'return'
         ? 't-muted'
         : 't-backend';
-  return `        <g data-detail="context">
-          <rect x="${center - labelW / 2}" y="${y - 10}" width="${labelW}" height="${layout.labelH}" rx="3" class="c-mask"/>
-          <text x="${center}" y="${y}" class="${accent}" font-size="9" text-anchor="middle">${esc(message.label)}</text>
+  return `        <g ${phaseBands ? '' : 'data-detail="context"'}>
+          <rect x="${center - labelW / 2}" y="${box ? box.y : y - 10}" width="${labelW}" height="${layout.labelH}" rx="3" class="c-mask"/>
+          <text x="${center}" y="${y}" class="${accent}" font-size="${phaseBands ? 13 : 9}" text-anchor="middle">${esc(message.label)}</text>
         </g>`;
 }
 
@@ -434,10 +510,12 @@ ${renderDefinitions()}
 ${asArray(sequence.segments).map(renderSegment).join('\n\n')}
 
         <!-- Lifelines -->
+${phaseBands ? participantList.map(p => `<rect x="${p.x}" y="142" width="${p.width}" height="${layout.lifelineBottom - 142}" fill="var(--lane-fill)" stroke="var(--lane-stroke)" stroke-width="0.8"/>`).join('\n') : ''}
 ${participantList.map(renderLifeline).join('\n')}
 
         <!-- Activations -->
 ${asArray(sequence.activations).map(renderActivation).join('\n')}
+${activities.map(renderActivity).join('\n')}
 
         <!-- Messages -->
 ${asArray(sequence.messages).map(renderMessage).join('\n\n')}
@@ -449,7 +527,7 @@ ${asArray(sequence.segments).map(renderSegmentLabel).join('\n')}
 ${participantList.map(renderParticipant).join('\n\n')}
 
         <!-- Legend -->
-${renderLegend()}
+${phaseBands ? `<text x="30" y="${viewBox[1] - 20}" class="t-primary" font-size="12">${esc(sequence.meta.phase_note || 'Logical phases and message order; vertical distance is not elapsed time.')}</text>` : renderLegend()}
       </svg>`;
 }
 
